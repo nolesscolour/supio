@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Estimated time per page in seconds. Tuned from observed runs:
 // primary page (Lighthouse + axe + tokens + copy) ~60s
