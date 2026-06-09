@@ -7,7 +7,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { runLighthouse, runAxe, runTokens, runCopy, runScout } = require('./lib/browserless');
+const { runLighthouse, runAxe, runTokens, runCopy, runScout, runAudit } = require('./lib/browserless');
 const httpChecks = require('./lib/http');
 const techstack = require('./lib/techstack');
 
@@ -268,14 +268,25 @@ app.post('/api/analyze', async (req, res) => {
           page.techStack = techstack.detect({ html: source.html || '', headers: headers.headers || {} });
         }
 
-        console.log('  Running tokens...');
-        const tokenResults = await runTokens(url);
-        page.tokens = formatTokens(tokenResults.data);
+        console.log('  Running audit (tokens + copy + 6 new audits)...');
+        const auditResults = await runAudit(url);
+        const audit = auditResults.data || {};
+        page.tokens = formatTokens(audit.tokens);
+        page.copy = {
+          meta: audit.meta || {},
+          sections: audit.sections || [],
+          ctas: audit.ctas || [],
+          altTexts: audit.altTexts || [],
+          stats: audit.stats || {},
+        };
+        page.contrastPairs = audit.contrastPairs || [];
+        page.imageAudit = audit.imageAudit || null;
+        page.formAudit = audit.formAudit || null;
+        page.ariaReport = audit.ariaReport || null;
+        page.structure = audit.structure || [];
+        page.fontLoading = audit.fontLoading || null;
 
-        console.log('  Running copy...');
-        const copyResults = await runCopy(url);
-        page.copy = copyResults.data || { meta: {}, sections: [], ctas: [], altTexts: [], stats: {} };
-        if (isPrimary && copyResults.data) {
+        if (isPrimary && audit.tokens) {
           // Build link list from this page's anchors. For now use scout data + sitemap if available.
           const linkSet = new Set();
           if (page.sitemap?.urls) page.sitemap.urls.forEach(u => linkSet.add(u));

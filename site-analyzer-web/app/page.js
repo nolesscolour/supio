@@ -670,6 +670,361 @@ export default function Home() {
             </section>
           )}
 
+          {primary.imageAudit && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / images · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.imageAudit.total} total
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#1a1a1a]/15 mb-6">
+                  <div className="bg-[#faf8f3] p-4">
+                    <div className={`text-3xl font-light ${primary.imageAudit.missingAlt > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                      {primary.imageAudit.missingAlt}
+                    </div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mt-2">Missing alt</div>
+                  </div>
+                  <div className="bg-[#faf8f3] p-4">
+                    <div className={`text-3xl font-light ${primary.imageAudit.emptyAlt > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {primary.imageAudit.emptyAlt}
+                    </div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mt-2">Empty alt</div>
+                  </div>
+                  <div className="bg-[#faf8f3] p-4">
+                    <div className={`text-3xl font-light ${primary.imageAudit.notLazyLoaded > primary.imageAudit.total / 2 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {primary.imageAudit.notLazyLoaded}
+                    </div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mt-2">Not lazy</div>
+                  </div>
+                  <div className="bg-[#faf8f3] p-4">
+                    <div className={`text-3xl font-light ${primary.imageAudit.oversized > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {primary.imageAudit.oversized}
+                    </div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mt-2">Oversized</div>
+                  </div>
+                </div>
+
+                {primary.imageAudit.formatBreakdown && Object.keys(primary.imageAudit.formatBreakdown).length > 0 && (
+                  <div>
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                      Format breakdown
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(primary.imageAudit.formatBreakdown).map(([format, count]) => (
+                        <div key={format} className="border border-[#1a1a1a]/15 bg-white/40 px-3 py-1.5 font-mono text-xs">
+                          <span className="uppercase">{format}</span>
+                          <span className="text-[#1a1a1a]/60 ml-2">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {primary.ariaReport && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60 mb-6">
+                  / accessibility · primary page
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-px bg-[#1a1a1a]/15 mb-6">
+                  <div className="bg-[#faf8f3] p-6">
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-4">
+                      Landmarks
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(primary.ariaReport.landmarks).map(([name, count]) => (
+                        <div key={name} className="flex items-center justify-between font-mono text-xs">
+                          <span className="capitalize">{name}</span>
+                          <span className={count === 0 && ['main', 'nav'].includes(name) ? 'text-red-700' : count === 0 ? 'text-[#1a1a1a]/40' : 'text-emerald-700'}>
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#faf8f3] p-6">
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-4">
+                      Headings
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(primary.ariaReport.headings).map(([level, count]) => (
+                        <div key={level} className="flex items-center justify-between font-mono text-xs">
+                          <span className="uppercase">{level}</span>
+                          <span className={count === 0 ? 'text-[#1a1a1a]/40' : 'text-[#1a1a1a]'}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#faf8f3] p-6">
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-4">
+                      ARIA attributes
+                    </h3>
+                    <div className="space-y-2 font-mono text-xs">
+                      <div className="flex items-center justify-between">
+                        <span>aria-label</span>
+                        <span>{primary.ariaReport.ariaLabels}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>aria-labelledby</span>
+                        <span>{primary.ariaReport.ariaLabelledby}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>aria-describedby</span>
+                        <span>{primary.ariaReport.ariaDescribedby}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>aria-hidden</span>
+                        <span>{primary.ariaReport.ariaHidden}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-[#1a1a1a]/10">
+                        <span>Skip link</span>
+                        <span className={primary.ariaReport.hasSkipLink ? 'text-emerald-700' : 'text-amber-700'}>
+                          {primary.ariaReport.hasSkipLink ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>lang attr</span>
+                        <span className={primary.ariaReport.hasLangAttr ? 'text-emerald-700' : 'text-red-700'}>
+                          {primary.ariaReport.hasLangAttr ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {Object.keys(primary.ariaReport.roles).length > 0 && (
+                  <div>
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                      ARIA roles in use
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(primary.ariaReport.roles).map(([role, count]) => (
+                        <div key={role} className="border border-[#1a1a1a]/15 bg-white/40 px-3 py-1.5 font-mono text-xs">
+                          <span>{role}</span>
+                          <span className="text-[#1a1a1a]/60 ml-2">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {primary.formAudit && primary.formAudit.total > 0 && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / forms · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.formAudit.total} form{primary.formAudit.total !== 1 ? 's' : ''} · {primary.formAudit.totalInputs} input{primary.formAudit.totalInputs !== 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {primary.formAudit.forms.map((form, i) => (
+                    <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 p-5">
+                      <div className="flex flex-wrap items-baseline gap-3 mb-4 pb-3 border-b border-[#1a1a1a]/10">
+                        <span className="font-mono text-[10px] tracking-widest uppercase text-[#b8893d]">
+                          Form {i + 1}
+                        </span>
+                        <span className="font-mono text-xs text-[#1a1a1a]/60">
+                          {form.method.toUpperCase()} · {form.inputCount} inputs
+                        </span>
+                        {form.action && (
+                          <span className="font-mono text-[10px] text-[#1a1a1a]/40 truncate">→ {form.action}</span>
+                        )}
+                        {form.unlabeled > 0 && (
+                          <span className="font-mono text-[10px] tracking-widest uppercase text-red-700 border border-red-300 px-2 py-0.5">
+                            {form.unlabeled} unlabeled
+                          </span>
+                        )}
+                        {form.missingAutocomplete > 0 && (
+                          <span className="font-mono text-[10px] tracking-widest uppercase text-amber-700 border border-amber-300 px-2 py-0.5">
+                            {form.missingAutocomplete} missing autocomplete
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {form.inputs.map((input, j) => (
+                          <div key={j} className="flex items-center gap-3 font-mono text-xs">
+                            <span className="text-[#1a1a1a]/60 w-20 shrink-0 truncate">{input.type}</span>
+                            <span className="flex-1 truncate">
+                              {input.name || input.id || <span className="text-[#1a1a1a]/40 italic">unnamed</span>}
+                            </span>
+                            {input.required && (
+                              <span className="text-[10px] tracking-widest uppercase text-[#b8893d] shrink-0">req</span>
+                            )}
+                            {!input.hasLabel && (
+                              <span className="text-[10px] tracking-widest uppercase text-red-700 shrink-0">no label</span>
+                            )}
+                            {input.hasAutocomplete && (
+                              <span className="text-[10px] text-[#1a1a1a]/40 shrink-0 truncate">auto: {input.autocomplete}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {primary.contrastPairs && primary.contrastPairs.length > 0 && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / contrast pairs · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.contrastPairs.length} pairs
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {primary.contrastPairs.map((pair, i) => (
+                    <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 flex items-stretch">
+                      <div
+                        className="flex-1 px-4 py-3 flex items-center justify-center font-mono text-sm"
+                        style={{ color: pair.foreground, backgroundColor: pair.background }}
+                      >
+                        Aa sample
+                      </div>
+                      <div className="px-4 py-3 bg-[#faf8f3] border-l border-[#1a1a1a]/10 flex flex-col justify-center min-w-[180px]">
+                        <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">FG: {pair.foreground}</div>
+                        <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">BG: {pair.background}</div>
+                        <div className="font-mono text-[10px] text-[#1a1a1a]/40 mt-1">{pair.count}× used</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {primary.fontLoading && (
+            (primary.fontLoading.preloadLinks.length > 0 ||
+             primary.fontLoading.googleFontLinks.length > 0 ||
+             primary.fontLoading.fontFaceRules.length > 0) && (
+              <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex items-baseline justify-between mb-6">
+                    <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                      / font loading · primary page
+                    </div>
+                    <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                      font-display: <span className={primary.fontLoading.hasFontDisplay ? 'text-emerald-700' : 'text-amber-700'}>{primary.fontLoading.hasFontDisplay ? 'set' : 'unset'}</span>
+                    </div>
+                  </div>
+
+                  {primary.fontLoading.googleFontLinks.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                        Google Fonts ({primary.fontLoading.googleFontLinks.length})
+                      </h3>
+                      <div className="border border-[#1a1a1a]/15 bg-white/40 divide-y divide-[#1a1a1a]/10">
+                        {primary.fontLoading.googleFontLinks.map((href, i) => (
+                          <div key={i} className="px-4 py-2 font-mono text-xs truncate">{href}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {primary.fontLoading.preloadLinks.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                        Preload links ({primary.fontLoading.preloadLinks.length})
+                      </h3>
+                      <div className="border border-[#1a1a1a]/15 bg-white/40 divide-y divide-[#1a1a1a]/10">
+                        {primary.fontLoading.preloadLinks.map((link, i) => (
+                          <div key={i} className="px-4 py-2 font-mono text-xs">
+                            <span className="text-[#1a1a1a]/60 mr-2">{link.rel}</span>
+                            <span className="truncate">{link.href}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {primary.fontLoading.fontFaceRules.length > 0 && (
+                    <div>
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                        @font-face rules ({primary.fontLoading.fontFaceRules.length})
+                      </h3>
+                      <div className="border border-[#1a1a1a]/15 bg-white/40 divide-y divide-[#1a1a1a]/10">
+                        {primary.fontLoading.fontFaceRules.map((rule, i) => (
+                          <div key={i} className="px-4 py-2 font-mono text-xs flex gap-4">
+                            <span className="w-48 shrink-0 truncate">{rule.family || <span className="text-[#1a1a1a]/40 italic">unnamed</span>}</span>
+                            <span className="text-[#1a1a1a]/60 w-24 shrink-0">{rule.display}</span>
+                            <span className="text-[#1a1a1a]/40 truncate flex-1">{rule.src}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )
+          )}
+
+          {primary.structure && primary.structure.length > 0 && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / structure · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.structure.length} semantic region{primary.structure.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {primary.structure.map((region, i) => (
+                    <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 p-4">
+                      <div className="flex flex-wrap items-baseline gap-3 mb-2">
+                        <span className="font-mono text-xs tracking-widest uppercase text-[#b8893d]">
+                          &lt;{region.tag}&gt;
+                        </span>
+                        {region.role && (
+                          <span className="font-mono text-[10px] text-[#1a1a1a]/60">role={region.role}</span>
+                        )}
+                        {region.ariaLabel && (
+                          <span className="font-mono text-[10px] text-[#1a1a1a]/60">aria-label="{region.ariaLabel}"</span>
+                        )}
+                        {region.firstHeading && (
+                          <span className="text-sm">{region.firstHeading}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-4 font-mono text-[10px] text-[#1a1a1a]/60">
+                        <span>{region.childCount} children</span>
+                        {region.imageCount > 0 && <span>{region.imageCount} img</span>}
+                        {region.linkCount > 0 && <span>{region.linkCount} links</span>}
+                        {region.buttonCount > 0 && <span>{region.buttonCount} buttons</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
             <div className="max-w-7xl mx-auto">
               <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60 mb-6">
