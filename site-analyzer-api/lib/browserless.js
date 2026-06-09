@@ -182,9 +182,10 @@ async function runCopy(url) {
         });
         if (current.heading || current.paragraphs.length) sections.push(current);
 
-        // Buttons and CTAs
+        // Buttons and CTAs. Normalize whitespace — innerText preserves indentation
+        // from HTML, producing "Let's\\n        Go!" when source is multi-line.
         const ctas = Array.from(document.querySelectorAll('button, a.btn, [role="button"]'))
-          .map(el => el.innerText?.trim())
+          .map(el => el.innerText?.replace(/\\s+/g, ' ').trim())
           .filter(t => t && t.length < 80);
 
         // Image alt text (for accessibility audit reference)

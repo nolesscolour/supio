@@ -483,6 +483,35 @@ export default function Home() {
             </div>
           </section>
 
+          {primary.techStack && primary.techStack.count > 0 && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / tech stack · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.techStack.count} detected
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-px bg-[#1a1a1a]/15">
+                  {Object.entries(primary.techStack.grouped).map(([category, items]) => (
+                    <div key={category} className="bg-[#faf8f3] p-6">
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-4">
+                        {category}
+                      </h3>
+                      <div className="space-y-1">
+                        {items.map((name) => (
+                          <div key={name} className="text-sm">{name}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-baseline justify-between mb-6">
@@ -517,6 +546,129 @@ export default function Home() {
               )}
             </div>
           </section>
+
+          {primary.http && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60 mb-6">
+                  / http · primary page
+                </div>
+
+                {primary.http.redirects && primary.http.redirects.length > 1 && (
+                  <div className="mb-8">
+                    <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                      Redirect chain ({primary.http.redirects.length} hops)
+                    </h3>
+                    <div className="border border-[#1a1a1a]/15 divide-y divide-[#1a1a1a]/10 bg-white/40">
+                      {primary.http.redirects.map((hop, i) => (
+                        <div key={i} className="px-4 py-2 font-mono text-xs flex items-center gap-3">
+                          <span className="text-[#1a1a1a]/40 w-6">{i + 1}.</span>
+                          <span className={`shrink-0 w-12 ${hop.status >= 400 ? 'text-red-700' : hop.status >= 300 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {hop.status || 'ERR'}
+                          </span>
+                          <span className="truncate">{hop.url}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60 mb-3">
+                  Response headers
+                </h3>
+                <div className="border border-[#1a1a1a]/15 bg-white/40 divide-y divide-[#1a1a1a]/10">
+                  {Object.entries(primary.http.headers || {}).map(([key, value]) => (
+                    <div key={key} className="px-4 py-2 font-mono text-xs flex gap-4">
+                      <span className="text-[#1a1a1a]/60 w-48 shrink-0 truncate">{key}</span>
+                      <span className="break-all flex-1">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {(primary.robots || primary.sitemap) && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60 mb-6">
+                  / crawl · primary page
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-px bg-[#1a1a1a]/15">
+                  <div className="bg-[#faf8f3] p-6">
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60">
+                        robots.txt
+                      </h3>
+                      <span className={`font-mono text-[10px] tracking-widest uppercase ${primary.robots?.found ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {primary.robots?.found ? 'Found' : 'Missing'}
+                      </span>
+                    </div>
+                    {primary.robots?.found ? (
+                      <pre className="font-mono text-xs bg-white/60 border border-[#1a1a1a]/10 p-3 overflow-x-auto whitespace-pre-wrap break-all">{primary.robots.content}</pre>
+                    ) : (
+                      <p className="text-xs text-[#1a1a1a]/60 italic">No robots.txt at site root.</p>
+                    )}
+                  </div>
+
+                  <div className="bg-[#faf8f3] p-6">
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#1a1a1a]/60">
+                        sitemap.xml
+                      </h3>
+                      <span className={`font-mono text-[10px] tracking-widest uppercase ${primary.sitemap?.found ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {primary.sitemap?.found ? `${primary.sitemap.urlCount} URLs` : 'Missing'}
+                      </span>
+                    </div>
+                    {primary.sitemap?.found ? (
+                      <div className="border border-[#1a1a1a]/10 bg-white/60 max-h-64 overflow-y-auto">
+                        {primary.sitemap.urls.slice(0, 30).map((u, i) => (
+                          <div key={i} className="px-3 py-1.5 font-mono text-xs truncate border-b border-[#1a1a1a]/5 last:border-b-0">{u}</div>
+                        ))}
+                        {primary.sitemap.urls.length > 30 && (
+                          <div className="px-3 py-2 font-mono text-[10px] text-[#1a1a1a]/40">+ {primary.sitemap.urls.length - 30} more</div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#1a1a1a]/60 italic">No sitemap.xml at site root.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {primary.linkCheck && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / links · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.linkCheck.total} checked · {primary.linkCheck.broken} broken
+                  </div>
+                </div>
+
+                {primary.linkCheck.broken === 0 ? (
+                  <p className="text-sm text-[#1a1a1a]/60 italic">All links responded with 2xx or 3xx status codes.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {primary.linkCheck.brokenLinks.map((link, i) => (
+                      <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 px-4 py-3 font-mono text-xs flex items-center gap-4">
+                        <span className={`shrink-0 w-12 ${link.status >= 500 ? 'text-red-700' : link.status >= 400 ? 'text-amber-700' : 'text-red-700'}`}>
+                          {link.status || 'ERR'}
+                        </span>
+                        <span className="truncate flex-1">{link.url}</span>
+                        {link.error && <span className="text-[#1a1a1a]/40 text-[10px] shrink-0">{link.error}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
             <div className="max-w-7xl mx-auto">

@@ -8,6 +8,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { runLighthouse, runAxe, runTokens, runCopy, runScout } = require('./lib/browserless');
+const httpChecks = require('./lib/http');
+const techstack = require('./lib/techstack');
 
 const app = express();
 const PORT = 3001;
@@ -26,8 +28,25 @@ function rgbToHex(rgb) {
 
 function formatTokens(rawTokens) {
   const t = rawTokens || { colors: [], fonts: [], spacing: [] };
+
+  // Dedupe colors by hex. Sum counts. Track alpha variants separately.
+  const colorMap = new Map();
+  for (const c of t.colors) {
+    const hex = rgbToHex(c.value);
+    const alphaMatch = c.value.match(/rgba?\([^)]+,\s*([\d.]+)\)/);
+    const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 1;
+    if (!colorMap.has(hex)) {
+      colorMap.set(hex, { value: hex, rgb: c.value, count: 0, variants: [] });
+    }
+    const entry = colorMap.get(hex);
+    entry.count += c.count;
+    if (alpha < 1) entry.variants.push({ rgb: c.value, alpha, count: c.count });
+  }
+
+  const dedupedColors = Array.from(colorMap.values()).sort((a, b) => b.count - a.count);
+
   return {
-    colors: t.colors.map(c => ({ value: rgbToHex(c.value), rgb: c.value, count: c.count })),
+    colors: dedupedColors,
     fonts: t.fonts,
     spacing: t.spacing,
   };
@@ -232,6 +251,21 @@ app.post('/api/analyze', async (req, res) => {
             id: v.id, impact: v.impact, description: v.description,
             help: v.help, helpUrl: v.helpUrl, nodeCount: v.nodes.length,
           }));
+
+          console.log('  Running HTTP checks (headers, redirects, robots, sitemap, source)...');
+          const [headers, robots, sitemap, source] = await Promise.all([
+            httpChecks.getHeaders(url),
+            httpChecks.getRobotsTxt(url),
+            httpChecks.getSitemap(url),
+            httpChecks.getHtmlSource(url),
+          ]);
+          page.http = { headers: headers.headers, redirects: headers.redirects, finalUrl: headers.finalUrl };
+          page.robots = robots;
+          page.sitemap = sitemap;
+          page.htmlSource = { ok: source.ok, sizeBytes: source.sizeBytes, status: source.status };
+
+          console.log('  Detecting tech stack...');
+          page.techStack = techstack.detect({ html: source.html || '', headers: headers.headers || {} });
         }
 
         console.log('  Running tokens...');
@@ -241,6 +275,16 @@ app.post('/api/analyze', async (req, res) => {
         console.log('  Running copy...');
         const copyResults = await runCopy(url);
         page.copy = copyResults.data || { meta: {}, sections: [], ctas: [], altTexts: [], stats: {} };
+        if (isPrimary && copyResults.data) {
+          // Build link list from this page's anchors. For now use scout data + sitemap if available.
+          const linkSet = new Set();
+          if (page.sitemap?.urls) page.sitemap.urls.forEach(u => linkSet.add(u));
+          if (linkSet.size > 0) {
+            console.log(`  Checking ${linkSet.size} links for breakage...`);
+            const linkCheck = await httpChecks.checkLinks(Array.from(linkSet).slice(0, 50));
+            page.linkCheck = { total: linkCheck.total, broken: linkCheck.broken, brokenLinks: linkCheck.brokenLinks };
+          }
+        }
       } catch (err) {
         console.error(`  Failed on ${url}:`, err.message);
         page.error = err.message;
