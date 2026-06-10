@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+
+// react-d3-tree uses document on import, so load it client-only.
+const Tree = dynamic(() => import('react-d3-tree'), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -197,6 +201,70 @@ export default function Home() {
     if (impact === 'serious') return 'bg-orange-100 text-orange-900 border-orange-300';
     if (impact === 'moderate') return 'bg-amber-100 text-amber-900 border-amber-300';
     return 'bg-stone-100 text-stone-700 border-stone-300';
+  }
+  // Parse an rgb() or rgba() string into {r, g, b} 0-255 components.
+  // Returns null if the string can't be parsed.
+  function parseColor(str) {
+    if (!str) return null;
+    const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) return null;
+    return { r: parseInt(m[1]), g: parseInt(m[2]), b: parseInt(m[3]) };
+  }
+
+  // Compute relative luminance per WCAG formula.
+  function luminance(rgb) {
+    const norm = (v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * norm(rgb.r) + 0.7152 * norm(rgb.g) + 0.0722 * norm(rgb.b);
+  }
+
+  // WCAG contrast ratio between two colors. Returns a number like 4.52, or null if unparseable.
+  function contrastRatio(fg, bg) {
+    const fgc = parseColor(fg);
+    const bgc = parseColor(bg);
+    if (!fgc || !bgc) return null;
+    const l1 = luminance(fgc);
+    const l2 = luminance(bgc);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+  // Convert a flat list of URLs into a tree structure for react-d3-tree.
+  // Groups URLs by their path segments. Root = origin, branches = path depth.
+  function buildSitemapTree(urls, primaryUrl) {
+    if (!urls || urls.length === 0) return { name: 'empty', children: [] };
+
+    let origin = '';
+    try { origin = new URL(primaryUrl || urls[0]).origin; } catch { origin = 'site'; }
+
+    const root = { name: origin.replace(/^https?:\/\//, ''), children: [], _path: '/' };
+
+    urls.forEach(url => {
+      let path;
+      try {
+        path = new URL(url).pathname;
+      } catch {
+        return;
+      }
+      if (path === '/' || path === '') return;
+
+      const segments = path.split('/').filter(Boolean);
+      let cursor = root;
+
+      segments.forEach((segment, i) => {
+        const currentPath = '/' + segments.slice(0, i + 1).join('/');
+        let child = cursor.children.find(c => c._path === currentPath);
+        if (!child) {
+          child = { name: segment, children: [], _path: currentPath };
+          cursor.children.push(child);
+        }
+        cursor = child;
+      });
+    });
+
+    return root;
   }
 
   const primary = data?.pages?.find(p => p.url === data.primaryUrl) || data?.pages?.[0];
@@ -638,6 +706,96 @@ export default function Home() {
               </div>
             </section>
           )}
+          {primary.sitemap?.found && primary.sitemap?.urls?.length > 1 && (
+            <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between mb-6">
+                  <div className="font-mono text-xs tracking-widest uppercase text-[#1a1a1a]/60">
+                    / sitemap diagram · primary page
+                  </div>
+                  <div className="font-mono text-xs tracking-widest text-[#1a1a1a]/60">
+                    {primary.sitemap.urls.length} URLs · drag to pan · scroll to zoom
+                  </div>
+                </div>
+
+                <div className="border border-[#1a1a1a]/15 bg-white/40" style={{ height: '500px' }}>
+                  <Tree
+                    data={buildSitemapTree(primary.sitemap.urls, primary.url)}
+                    orientation="vertical"
+                    pathFunc="step"
+                    translate={{ x: 500, y: 80 }}
+                    nodeSize={{ x: 180, y: 90 }}
+                    separation={{ siblings: 1, nonSiblings: 1.8 }}
+                    collapsible={true}
+                    initialDepth={2}
+                    zoom={0.7}
+                    renderCustomNodeElement={({ nodeDatum, toggleNode }) => {
+                      const childCount = nodeDatum.children?.length || nodeDatum._children?.length || 0;
+                      const isCollapsed = nodeDatum.__rd3t?.collapsed;
+                      const fullLabel = nodeDatum.name;
+                      const truncatedLabel = fullLabel.length > 18 ? fullLabel.slice(0, 17) + '…' : fullLabel;
+                      const isTruncated = fullLabel.length > 18;
+                      const countLabel = childCount > 0 ? ` (${childCount})` : '';
+                      const displayText = truncatedLabel + countLabel;
+                      const charWidth = 6.8;
+                      const padding = 20;
+                      const textWidth = Math.max(displayText.length * charWidth + padding, 80);
+
+                      let bgFill, textColor, strokeColor, strokeWidth;
+                      if (childCount === 0) {
+                        bgFill = '#faf8f3';
+                        textColor = '#1a1a1a';
+                        strokeColor = '#1a1a1a';
+                        strokeWidth = 1;
+                      } else if (isCollapsed) {
+                        bgFill = '#b8893d';
+                        textColor = '#faf8f3';
+                        strokeColor = '#b8893d';
+                        strokeWidth = 0;
+                      } else {
+                        bgFill = '#4a7c4e';
+                        textColor = '#faf8f3';
+                        strokeColor = '#4a7c4e';
+                        strokeWidth = 0;
+                      }
+
+                      return (
+                        <g onClick={toggleNode} style={{ cursor: childCount > 0 ? 'pointer' : 'default' }}>
+                          <rect
+                            x={-textWidth / 2}
+                            y={-14}
+                            width={textWidth}
+                            height={28}
+                            fill={bgFill}
+                            stroke={strokeColor}
+                            strokeWidth={strokeWidth}
+                            rx={0}
+                          />
+                          <text
+                            fill={textColor}
+                            x={0}
+                            y={5}
+                            textAnchor="middle"
+                            style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 400 }}
+                          >
+                            {truncatedLabel}
+                            {childCount > 0 && (
+                              <tspan opacity={0.6} dx={4} style={{ fontSize: '9px' }}>
+                                ({childCount})
+                              </tspan>
+                            )}
+                          </text>
+                          {isTruncated && (
+                            <title>{fullLabel}</title>
+                          )}
+                        </g>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
 
           {primary.linkCheck && (
             <section className="border-b border-[#1a1a1a]/15 px-6 py-12">
@@ -898,21 +1056,39 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {primary.contrastPairs.map((pair, i) => (
-                    <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 flex items-stretch">
-                      <div
-                        className="flex-1 px-4 py-3 flex items-center justify-center font-mono text-sm"
-                        style={{ color: pair.foreground, backgroundColor: pair.background }}
-                      >
-                        Aa sample
+                  {primary.contrastPairs.map((pair, i) => {
+                    const ratio = contrastRatio(pair.foreground, pair.background);
+                    const ratioStr = ratio ? ratio.toFixed(2) : '—';
+                    const passAA = ratio && ratio >= 4.5;
+                    const passAAA = ratio && ratio >= 7;
+                    const passAALarge = ratio && ratio >= 3;
+                    return (
+                      <div key={i} className="border border-[#1a1a1a]/15 bg-white/40 flex items-stretch">
+                        <div
+                          className="flex-1 px-4 py-3 flex items-center justify-center font-mono text-sm"
+                          style={{ color: pair.foreground, backgroundColor: pair.background }}
+                        >
+                          Aa sample
+                        </div>
+                        <div className="px-4 py-3 bg-[#faf8f3] border-l border-[#1a1a1a]/10 flex flex-col justify-center min-w-[200px]">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="font-mono text-sm">{ratioStr}<span className="text-[#1a1a1a]/40">:1</span></span>
+                            <div className="flex gap-1">
+                              <span className={`font-mono text-[9px] tracking-widest uppercase border px-1.5 py-0.5 ${passAA ? 'text-emerald-700 border-emerald-300' : 'text-red-700 border-red-300'}`}>
+                                AA {passAA ? '✓' : '✗'}
+                              </span>
+                              <span className={`font-mono text-[9px] tracking-widest uppercase border px-1.5 py-0.5 ${passAAA ? 'text-emerald-700 border-emerald-300' : 'text-[#1a1a1a]/40 border-[#1a1a1a]/15'}`}>
+                                AAA {passAAA ? '✓' : '✗'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">FG: {pair.foreground}</div>
+                          <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">BG: {pair.background}</div>
+                          <div className="font-mono text-[10px] text-[#1a1a1a]/40 mt-1">{pair.count}× used{!passAA && passAALarge && ' · ok for large text'}</div>
+                        </div>
                       </div>
-                      <div className="px-4 py-3 bg-[#faf8f3] border-l border-[#1a1a1a]/10 flex flex-col justify-center min-w-[180px]">
-                        <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">FG: {pair.foreground}</div>
-                        <div className="font-mono text-[10px] text-[#1a1a1a]/60 truncate">BG: {pair.background}</div>
-                        <div className="font-mono text-[10px] text-[#1a1a1a]/40 mt-1">{pair.count}× used</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>

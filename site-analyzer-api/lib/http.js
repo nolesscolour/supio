@@ -68,16 +68,61 @@ async function getRobotsTxt(url) {
 }
 
 // Fetches sitemap.xml from the site root. Also parses out URLs if it's valid XML.
+// Fetches a single sitemap file. Returns its locs or null on failure.
+// Internal helper. Used by getSitemap which handles index detection.
+async function fetchSitemapLocs(sitemapUrl) {
+  try {
+    const trace = await traceRedirects(sitemapUrl);
+    const res = await fetch(trace.finalUrl, { method: 'GET' });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const isIndex = /<sitemapindex/i.test(text);
+    const locs = Array.from(text.matchAll(/<loc>([^<]+)<\/loc>/g)).map(m => m[1].trim());
+    return { isIndex, locs, status: res.status };
+  } catch {
+    return null;
+  }
+}
+
+// Fetches sitemap.xml from the site root. Handles sitemap index files
+// (common in WordPress) by following each child sitemap and merging URLs.
 async function getSitemap(url) {
   try {
     const origin = new URL(url).origin;
-    const sitemapUrl = `${origin}/sitemap.xml`;
-    const trace = await traceRedirects(sitemapUrl);
-    const res = await fetch(trace.finalUrl, { method: 'GET' });
-    if (!res.ok) return { found: false, status: res.status, urls: [] };
-    const text = await res.text();
-    const urls = Array.from(text.matchAll(/<loc>([^<]+)<\/loc>/g)).map(m => m[1].trim());
-    return { found: true, status: res.status, urlCount: urls.length, urls: urls.slice(0, 100), source: `${origin}/sitemap.xml` };
+    const rootUrl = `${origin}/sitemap.xml`;
+    const root = await fetchSitemapLocs(rootUrl);
+    if (!root) return { found: false, urls: [] };
+
+    // Single flat sitemap: return locs directly
+    if (!root.isIndex) {
+      return {
+        found: true,
+        status: root.status,
+        urlCount: root.locs.length,
+        urls: root.locs.slice(0, 200),
+        source: rootUrl,
+        wasIndex: false,
+      };
+    }
+
+    // Sitemap index: fetch each child sitemap (cap at 10 to avoid runaway requests)
+    const childUrls = root.locs.slice(0, 10);
+    const childResults = await Promise.all(childUrls.map(u => fetchSitemapLocs(u)));
+    const allUrls = new Set();
+    childResults.forEach(r => {
+      if (r?.locs) r.locs.forEach(u => allUrls.add(u));
+    });
+
+    const merged = Array.from(allUrls);
+    return {
+      found: true,
+      status: root.status,
+      urlCount: merged.length,
+      urls: merged.slice(0, 200),
+      source: rootUrl,
+      wasIndex: true,
+      childSitemaps: childUrls.length,
+    };
   } catch (err) {
     return { found: false, error: err.message, urls: [] };
   }
